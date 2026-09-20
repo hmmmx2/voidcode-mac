@@ -1,0 +1,57 @@
+VoidCode — macOS distribution
+Copyright 2026 VoidCode contributors
+
+Licensed under the Apache License, Version 2.0. See LICENSE.
+
+
+WHY THIS NOTICE IS LONGER THAN THE REPOSITORY
+
+There is no source code here. There are release assets: a `.dmg` per architecture and a
+`SHA256SUMS.txt`. But this repository is how the built application is DISTRIBUTED, and Apache-2.0
+section 4(d) attaches to distribution rather than to source. So the notices below pertain here, even
+though nothing in this repository's git history contains the code they describe.
+
+That is the opposite of the website's repository, whose NOTICE deliberately omits them: it publishes
+pages, not the application, so a component bundled into the application does not pertain to it.
+
+
+COMPONENTS WHOSE TERMS REQUIRE SPECIFIC NOTICE
+
+  Pyodide — Mozilla Public License 2.0
+    Bundled inside the application to provide the sandboxed Python execution tier. MPL-2.0 is
+    file-level copyleft: the Pyodide files themselves remain under MPL-2.0, and modifications to
+    those files must be published under the same terms. It does not affect the licence of the rest
+    of the application.
+    https://github.com/pyodide/pyodide
+
+
+WHERE THE FULL THIRD-PARTY LICENCE TEXT IS
+
+Inside the `.dmg`, under `Contents/Resources/licenses/`, assembled at build time. Every release also
+carries two CycloneDX SBOMs — `sbom-main.json` and `sbom-renderer.json`, one per dependency tree —
+on the main repository's release for the same tag. Two files because the application has two
+dependency trees; one would describe half of it while reading as if it described all of it.
+
+Naming the locations is deliberate. A NOTICE that says "licences are included" without saying where
+cannot be checked, and this project has had that sentence be false before: an earlier version of it
+claimed the build shipped licence text when the build shipped none.
+
+
+NOT BUNDLED, AND DELIBERATELY SO
+
+  CUDA and cuDNN are proprietary NVIDIA components and are never redistributed. A user who wants
+  GPU acceleration installs them themselves.
+
+  Model weights are not distributed with the application. They are downloaded by the user, and
+  their licences are the model publishers' own.
+
+  Research papers are not redistributed. arXiv's default licence grants distribution rights to
+  arXiv, not to third parties. Papers are fetched by the user's own machine and never re-served.
+
+
+ON SIGNING, BECAUSE IT IS A PROVENANCE CLAIM AND NOT A LICENCE ONE
+
+The `.dmg` is ad-hoc signed — `codesign --sign -`, a signature with no identity — and NOT notarised.
+The ad-hoc signature exists because Apple silicon refuses to execute an unsigned binary at all; it
+is not an assertion of who built the file, and it must not be read as one. `SHA256SUMS.txt` is the
+only provenance this distribution offers, and the README says how to check it.

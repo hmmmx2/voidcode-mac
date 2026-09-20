@@ -1,0 +1,22 @@
+# ── INSTALLERS ARE RELEASE ASSETS, NOT REPOSITORY CONTENT ────────────────────
+#
+# This is the only rule here that does any work, and it is a guard rather than housekeeping.
+#
+# A repository that accumulates binaries grows without bound and never shrinks: git keeps every
+# version of every object forever, so `git clone` becomes a download of every installer ever
+# shipped, and `git filter-repo` plus a force-push is the only way back. It is much easier to
+# prevent than to undo.
+#
+# The README says "no installers in git". These lines are what makes that true rather than a
+# request — an installer dropped in this directory while testing a release cannot be committed by
+# accident.
+*.dmg
+*.exe
+*.zip
+*.blockmap
+SHA256SUMS.txt
+sbom-*.json
+
+# OS noise
+.DS_Store
+Thumbs.db

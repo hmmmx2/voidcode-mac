@@ -1,0 +1,93 @@
+name: verify-release
+
+# Does SHA256SUMS.txt actually describe the files beside it?
+#
+# WHY THIS IS THE ONE CHECK THIS REPOSITORY CAN MAKE, AND WHY IT IS WORTH MAKING
+#
+# These installers are ad-hoc signed and not notarised, so nothing in a downloaded file establishes
+# who built it. The README tells people to check `SHA256SUMS.txt` instead, and calls it "the only
+# provenance this distribution offers". That instruction is only as good as the file: a checksums
+# file that does not match the binaries beside it is worse than none, because it converts a careful
+# reader's verification into false confidence.
+#
+# The checksums are produced in the main repository, over the assets it built, and the installers
+# are copied here by a separate job. Nothing until now re-checked the pair AFTER the copy. This
+# does, in the repository that hands the files out, against exactly what a visitor downloads.
+#
+# ON `release: published` RATHER THAN `created`. Releases arrive here as drafts and a human
+# publishes them, so `published` is the moment the files become reachable — and therefore the moment
+# the claim starts being made to the public. `workflow_dispatch` is there so a draft can be checked
+# before anyone publishes it.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to verify (defaults to the latest, drafts included)"
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  checksums:
+    name: checksums match the installers
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download the release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # `github.event.release.tag_name` is empty on a manual run, hence the input and the
+          # fallback. `gh release download` with no tag takes the most recent release.
+          TAG: ${{ github.event.release.tag_name || inputs.tag }}
+        run: |
+          mkdir -p assets && cd assets
+          if [ -n "$TAG" ]; then
+            gh release download "$TAG" --repo "$GITHUB_REPOSITORY"
+          else
+            gh release download --repo "$GITHUB_REPOSITORY"
+          fi
+          ls -l
+
+      - name: Verify
+        working-directory: assets
+        run: |
+          if [ ! -f SHA256SUMS.txt ]; then
+            echo "::error::This release has no SHA256SUMS.txt. The README tells people to verify"
+            echo "::error::against it, so a release without one makes the README false."
+            exit 1
+          fi
+
+          # COUNT FIRST, VERIFY SECOND. `sha256sum --check` over a file listing nothing at all
+          # exits 0, and so does one whose every entry is missing under --ignore-missing. Either
+          # would report a green "verified" for a release nobody can check.
+          listed=$(grep -c '\.dmg$' SHA256SUMS.txt || true)
+          present=$(ls -1 *.dmg 2>/dev/null | wc -l)
+          echo "SHA256SUMS.txt lists $listed disk image(s); $present present in the release."
+
+          if [ "$listed" -eq 0 ]; then
+            echo "::error::SHA256SUMS.txt lists no .dmg, so there is nothing for a Mac user to check."
+            exit 1
+          fi
+          if [ "$present" -ne "$listed" ]; then
+            echo "::error::$listed disk image(s) are listed but $present are attached. Either an"
+            echo "::error::installer failed to copy here, or the checksums describe a different build."
+            exit 1
+          fi
+
+          # Only the disk images. SHA256SUMS.txt is produced in the main repository over every asset
+          # of that release — SBOMs and source maps included — and those are deliberately not copied
+          # here, so a plain `--check` would fail on files this repository is not supposed to carry.
+          grep '\.dmg$' SHA256SUMS.txt > dmg-only.txt
+          sha256sum --check --strict dmg-only.txt
+
+      - name: Say what was verified
+        working-directory: assets
+        run: |
+          echo "### Verified" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          cat dmg-only.txt >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
